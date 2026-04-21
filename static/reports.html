@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reports — CNC Shop Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div id="app-nav-host"></div>
+
+<div class="page-container wide">
+
+  <div class="section-header">
+    <div class="section-title">Cycle Time Reports</div>
+  </div>
+
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="field">
+        <label for="start-date">Start date</label>
+        <input type="date" id="start-date">
+      </div>
+      <div class="field">
+        <label for="end-date">End date</label>
+        <input type="date" id="end-date">
+      </div>
+      <div class="field">
+        <label for="machine-filter">Machine</label>
+        <select id="machine-filter">
+          <option value="all">All machines</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="pallet-filter">Pallet</label>
+        <select id="pallet-filter">
+          <option value="all">All pallets</option>
+          <option value="1">Pallet 1</option>
+          <option value="2">Pallet 2</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="program-filter">Program (optional)</label>
+        <input type="text" id="program-filter" placeholder="e.g. 1260">
+      </div>
+    </div>
+
+    <div class="preset-btns">
+      <button data-preset="today">Today</button>
+      <button data-preset="yesterday">Yesterday</button>
+      <button data-preset="7d">Last 7 days</button>
+      <button data-preset="30d">Last 30 days</button>
+      <button data-preset="thismonth">This month</button>
+    </div>
+
+    <div class="filter-actions">
+      <button id="run-btn" class="btn btn-primary">Run Report</button>
+      <button id="csv-btn" class="btn btn-secondary">Download CSV</button>
+    </div>
+  </div>
+
+  <div id="error-box" class="msg err"></div>
+
+  <div class="summary-row" id="summary-row" style="display:none;">
+    <div class="summary-card">
+      <div class="label">Total Cycles</div>
+      <div class="value" id="stat-count">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Avg Cycle Time</div>
+      <div class="value" id="stat-avg">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Min Cycle Time</div>
+      <div class="value" id="stat-min">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Max Cycle Time</div>
+      <div class="value" id="stat-max">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Runtime</div>
+      <div class="value" id="stat-total">—</div>
+    </div>
+  </div>
+
+  <div id="per-machine-row" style="display:none;">
+    <div class="per-machine-chips" id="per-machine-chips"></div>
+  </div>
+
+  <div class="table-wrap">
+    <div id="results-body">
+      <div class="empty-state">Choose a date range and click Run Report.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  window.CNC_NAV = {
+    title:    'Reports',
+    subtitle: 'Cycle Times',
+    active:   'reports',
+  };
+</script>
+<script src="/static/nav.js"></script>
+<script src="/static/reports.js"></script>
+</body>
+</html>

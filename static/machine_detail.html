@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machine Details — CNC Shop Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div id="app-nav-host"></div>
+
+<div class="detail-status-bar">
+  <div class="status-indicator">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusLabel">Loading…</span>
+  </div>
+  <div class="model-badge hidden" id="modelBadge">Unknown Model</div>
+  <div class="last-update" id="lastUpdate">Checking for data…</div>
+  <a href="#" class="btn btn-secondary btn-sm" id="liveViewLink">Live View ↗</a>
+</div>
+
+<div class="detail-content">
+  <div class="detail-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">24 Hour Statistics</div>
+      <div class="loading-inline" id="statsLoading"><div class="spinner"></div>Loading stats…</div>
+      <div class="stat-grid hidden" id="statsGrid">
+        <div>
+          <div class="stat-label">Uptime</div>
+          <div class="stat-value green" id="uptime">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Polls</div>
+          <div class="stat-value" id="pollCount">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Errors</div>
+          <div class="stat-value warn" id="errorCount">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Efficiency</div>
+          <div class="stat-value accent" id="efficiency">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Active Programs</div>
+      <div class="loading-inline" id="programsLoading"><div class="spinner"></div>Loading programs…</div>
+      <div id="programsList" class="hidden"></div>
+    </div>
+
+    <div class="sidebar-section" style="flex:1;">
+      <div class="sidebar-title">Recent Activity</div>
+      <div class="loading-inline" id="timelineLoading"><div class="spinner"></div>Loading timeline…</div>
+      <div class="timeline hidden" id="timeline"></div>
+    </div>
+  </div>
+
+  <div class="detail-main">
+    <div class="card">
+      <div class="card-title">Current Status</div>
+      <div class="loading-inline" id="currentLoading"><div class="spinner"></div>Loading current data…</div>
+      <div class="detail-data-grid hidden" id="currentData"></div>
+      <div class="error-state hidden" id="currentError">
+        <div>⚠</div>
+        <div>No recent data available</div>
+        <div style="font-size:11px;margin-top:8px;">This machine may be offline or not configured for monitoring.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.CNC_NAV = {
+    title:    'Machine Details',
+    subtitle: 'Historical Overview',
+    active:   'machine',
+  };
+</script>
+<script src="/static/nav.js"></script>
+<script src="/static/machine_detail.js"></script>
+</body>
+</html>

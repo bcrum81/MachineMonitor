@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machine Tester — CNC Shop Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div id="app-nav-host"></div>
+
+<main class="tester-main">
+  <aside class="config-panel">
+
+    <div>
+      <div class="panel-label">Machine Config</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+
+        <div class="field">
+          <label>Protocol</label>
+          <select id="protocol">
+            <option value="">Loading protocols…</option>
+          </select>
+          <span class="field-hint" id="protocolHint"></span>
+        </div>
+
+        <div class="field">
+          <label>Machine IP Address</label>
+          <input type="text" id="ip" placeholder="e.g. 192.168.20.105" />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Port</label>
+            <input type="number" id="port" placeholder="auto" />
+          </div>
+          <div class="field">
+            <label>Poll (sec)</label>
+            <input type="number" id="poll" value="2" min="1" step="0.5" />
+          </div>
+        </div>
+
+        <div id="authFields">
+          <div class="field" style="margin-bottom:8px;">
+            <label>Username (if required)</label>
+            <input type="text" id="username" placeholder="Leave blank if none" />
+          </div>
+          <div class="field">
+            <label>Password (if required)</label>
+            <input type="password" id="password" placeholder="Leave blank if none" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="pagesSection" class="hidden">
+      <div class="panel-label">Available Pages</div>
+      <div class="pages-list" id="pagesList"></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button class="btn btn-primary" id="pingBtn">▶ Test Connection</button>
+      <button class="btn btn-primary" id="connectBtn" disabled>⬡ Start Live Stream</button>
+      <button class="btn btn-secondary" id="stopBtn" disabled>■ Stop</button>
+    </div>
+
+    <div>
+      <div class="panel-label">Log</div>
+      <div class="status-log" id="statusLog">
+        <div class="entry">Enter machine IP and click Test Connection.</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <section class="data-panel">
+
+    <div class="stats-bar">
+      <span>POINTS <span class="stat-val" id="nodeCount">—</span></span>
+      <span>POLLS <span class="stat-val" id="pollCount">—</span></span>
+      <span>UPDATED <span class="stat-val" id="lastUpdate">—</span></span>
+      <span>INTERVAL <span class="stat-val" id="pollInterval">—</span></span>
+      <span class="status-indicator" style="margin-left:auto;">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusLabel">DISCONNECTED</span>
+      </span>
+      <div class="machine-pill" id="machinePill">—</div>
+    </div>
+
+    <div class="data-tabs">
+      <div class="tab active" data-tab="live">Live Data</div>
+      <div class="tab" data-tab="raw">Raw JSON</div>
+    </div>
+
+    <div class="tab-content active" id="tab-live">
+      <div class="empty-live" id="emptyState">
+        <div class="empty-icon">◎</div>
+        <div>No data yet</div>
+        <div class="muted" style="font-size:11px;">Connect to a machine to begin streaming</div>
+      </div>
+      <div id="liveContent" class="hidden"></div>
+    </div>
+
+    <div class="tab-content" id="tab-raw">
+      <div class="raw-view" id="rawView">// Waiting for data…</div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+  window.CNC_NAV = {
+    title:    'Machine Tester',
+    subtitle: 'Admin Diagnostic',
+    active:   'tester',
+  };
+</script>
+<script src="/static/nav.js"></script>
+<script src="/static/tester.js"></script>
+</body>
+</html>

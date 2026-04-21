@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live View — CNC Shop Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div id="app-nav-host"></div>
+
+<div class="data-panel">
+
+  <div class="stats-bar">
+    <span>POINTS <span class="stat-val" id="nodeCount">—</span></span>
+    <span>POLLS <span class="stat-val" id="pollCount">—</span></span>
+    <span>UPDATED <span class="stat-val" id="lastUpdate">—</span></span>
+    <span>INTERVAL <span class="stat-val" id="pollInterval">—</span></span>
+    <span class="status-indicator" style="margin-left:auto;">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusLabel">CONNECTING</span>
+    </span>
+    <div class="machine-pill" id="machinePill">—</div>
+  </div>
+
+  <div class="data-tabs">
+    <div class="tab active" data-tab="live">Live Data</div>
+    <div class="tab" data-tab="raw">Raw JSON</div>
+  </div>
+
+  <div class="tab-content active" id="tab-live">
+    <div class="empty-live" id="emptyState">
+      <div class="empty-icon">◎</div>
+      <div id="emptyTitle">Connecting to machine…</div>
+      <div class="muted" id="statusMsg"></div>
+    </div>
+    <div id="liveContent" class="hidden"></div>
+  </div>
+
+  <div class="tab-content" id="tab-raw">
+    <div class="raw-view" id="rawView">// Waiting for data…</div>
+  </div>
+
+</div>
+
+<script>
+  window.CNC_NAV = {
+    title:    'Live View',
+    subtitle: 'WebSocket Stream',
+    active:   'machine',
+  };
+</script>
+<script src="/static/nav.js"></script>
+<script src="/static/machine_view.js"></script>
+</body>
+</html>

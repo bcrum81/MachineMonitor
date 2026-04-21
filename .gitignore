@@ -1,0 +1,36 @@
+# ===== Runtime-generated — NEVER commit =====
+# Each install holds its own machine configs, admin credentials,
+# webhook subscriptions, Sheets config, and history database.
+config/
+data/
+
+# ===== Python =====
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== Editor / OS =====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== Logs / temp =====
+*.log
+*.tmp
+*.bak
+
+# ===== Credentials (never commit, even by accident) =====
+*.pem
+*.key
+credentials.json
+service-account*.json
