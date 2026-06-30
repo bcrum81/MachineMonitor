@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 #
-# MachineMonitor updater
-# ----------------------
+# CNC Probe updater
+# -----------------
 # Pulls latest from GitHub, refreshes Python deps, reinstalls systemd units
 # if they have changed, and restarts the service. Leaves config/ and data/
 # completely untouched.
 #
 # Usage:
-#   cd /opt/MachineMonitor
+#   cd /opt/cnc-probe
 #   sudo bash update.sh
 #
 
 set -euo pipefail
 
-INSTALL_DIR="/opt/MachineMonitor"
-SERVICE_NAME="machinemonitor"
-MDNS_ALIAS="machinemonitor.local"
+INSTALL_DIR="/opt/cnc-probe"
+SERVICE_NAME="cnc-probe"
+MDNS_ALIAS="cnc-probe.local"
 
 info()  { printf "\033[1;36m[UPDATE]\033[0m %s\n" "$*"; }
 warn()  { printf "\033[1;33m[UPDATE]\033[0m WARN: %s\n" "$*" >&2; }
@@ -28,7 +28,7 @@ cd "$INSTALL_DIR"
 
 # Stash any local edits (shouldn't happen on a clean install, but be safe)
 if ! git diff --quiet || ! git diff --cached --quiet; then
-    STASH_NAME="machinemonitor-pre-update-$(date +%Y%m%d-%H%M%S)"
+    STASH_NAME="cnc-probe-pre-update-$(date +%Y%m%d-%H%M%S)"
     warn "Local changes detected — stashing as '$STASH_NAME'"
     git stash push -u -m "$STASH_NAME" || true
 fi

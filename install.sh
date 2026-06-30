@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 #
-# MachineMonitor installer
-# -------------------------
+# CNC Probe installer
+# -------------------
 # One-command install on a fresh Ubuntu 22.04+ system.
 # Safe to re-run — preserves existing config/ and data/ if present.
 #
 # Usage:
 #   sudo apt install -y git
-#   sudo git clone https://github.com/bcrum81/MachineMonitor.git /opt/MachineMonitor
-#   cd /opt/MachineMonitor
+#   sudo git clone https://github.com/bcrum81/MachineMonitor.git /opt/cnc-probe
+#   cd /opt/cnc-probe
 #   sudo bash install.sh
 #
 
 set -euo pipefail
 
 # ============ configuration ============
-INSTALL_DIR="/opt/MachineMonitor"
-SERVICE_NAME="machinemonitor"
+INSTALL_DIR="/opt/cnc-probe"
+SERVICE_NAME="cnc-probe"
 APP_PORT=8765
-MDNS_ALIAS="machinemonitor.local"
+MDNS_ALIAS="cnc-probe.local"
 DEFAULT_ADMIN_USER="admin"
 DEFAULT_ADMIN_PASS="admin"
 
@@ -151,7 +151,7 @@ SRV_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 
 echo ""
 echo "================================================================"
-echo "  MachineMonitor install complete"
+echo "  CNC Probe install complete"
 echo "================================================================"
 echo ""
 echo "  Dashboard:   http://$MDNS_ALIAS:$APP_PORT/"

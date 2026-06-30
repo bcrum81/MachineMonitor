@@ -3,12 +3,12 @@
 Avahi CNAME publisher.
 
 Publishes a CNAME record that points <alias> -> <local machine's .local FQDN>.
-Allows the mini PC to be reached by a friendly name (e.g. machinemonitor.local)
+Allows the mini PC to be reached by a friendly name (e.g. cnc-probe.local)
 in addition to its default hostname.local.
 
 Invoked as a systemd service via /etc/systemd/system/avahi-alias@.service.
 Usage: avahi-alias <alias>
-Example: avahi-alias machinemonitor.local
+Example: avahi-alias cnc-probe.local
 
 Why this exists:
   Avahi's static XML service files (/etc/avahi/services/*.service) can publish

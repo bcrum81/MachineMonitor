@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 #
-# MachineMonitor uninstaller
-# --------------------------
+# CNC Probe uninstaller
+# ---------------------
 # Stops and removes the service, the mDNS alias, and the avahi-alias helper.
-# Prompts before deleting /opt/MachineMonitor/ itself (which still contains
+# Prompts before deleting /opt/cnc-probe/ itself (which still contains
 # config/ — credentials, machine configs, webhooks, Sheets — and data/ — the
 # SQLite history database).
 #
 # Usage:
-#   cd /opt/MachineMonitor
+#   cd /opt/cnc-probe
 #   sudo bash uninstall.sh
 #
 
 set -euo pipefail
 
-INSTALL_DIR="/opt/MachineMonitor"
-SERVICE_NAME="machinemonitor"
-MDNS_ALIAS="machinemonitor.local"
+INSTALL_DIR="/opt/cnc-probe"
+SERVICE_NAME="cnc-probe"
+MDNS_ALIAS="cnc-probe.local"
 APP_PORT=8765
 
 info()  { printf "\033[1;36m[UNINSTALL]\033[0m %s\n" "$*"; }
@@ -70,7 +70,7 @@ case "$REPLY" in
     yes|YES)
         info "Removing $INSTALL_DIR..."
         # Be defensive — must match exactly
-        if [ "$INSTALL_DIR" = "/opt/MachineMonitor" ]; then
+        if [ "$INSTALL_DIR" = "/opt/cnc-probe" ]; then
             rm -rf "$INSTALL_DIR"
             info "Removed $INSTALL_DIR"
         else

@@ -1,5 +1,5 @@
 [Unit]
-Description=MachineMonitor CNC Shop Monitor
+Description=CNC Probe — CNC Shop Monitor
 Documentation=https://github.com/bcrum81/MachineMonitor
 After=network-online.target
 Wants=network-online.target
@@ -7,9 +7,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/MachineMonitor
-ExecStart=/opt/MachineMonitor/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8765
-Restart=on-failure
+WorkingDirectory=/opt/cnc-probe
+ExecStart=/opt/cnc-probe/venv/bin/python app.py
+Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
