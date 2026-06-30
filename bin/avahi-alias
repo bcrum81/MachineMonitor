@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""
+Avahi CNAME publisher.
+
+Publishes a CNAME record that points <alias> -> <local machine's .local FQDN>.
+Allows the mini PC to be reached by a friendly name (e.g. machinemonitor.local)
+in addition to its default hostname.local.
+
+Invoked as a systemd service via /etc/systemd/system/avahi-alias@.service.
+Usage: avahi-alias <alias>
+Example: avahi-alias machinemonitor.local
+
+Why this exists:
+  Avahi's static XML service files (/etc/avahi/services/*.service) can publish
+  service records but NOT CNAME records. This script uses Avahi's D-Bus API
+  (AddRecord with record type 5 = CNAME) to publish one dynamically at runtime.
+
+Implementation note:
+  The rdata byte array must be wrapped as dbus.Array([dbus.Byte(b) for b in data],
+  signature='y') rather than a plain `bytes` object. Modern Python dbus bindings
+  reject raw bytes containing null bytes (which DNS label encodings always do)
+  when the signature is 'ay'.
+"""
+
+import avahi
+import dbus
+import signal
+import sys
+from encodings.idna import ToASCII
+
+TTL = 60
+CLASS_IN = 0x01
+TYPE_CNAME = 0x05
+
+
+def encode_dns(name):
+    """DNS label-encode a hostname into a byte sequence."""
+    out = bytearray()
+    for part in name.split("."):
+        if len(part) == 0:
+            continue
+        encoded = ToASCII(part)
+        out.append(len(encoded))
+        out.extend(encoded)
+    out.append(0)
+    return out
+
+
+def to_dbus_bytes(data):
+    return dbus.Array([dbus.Byte(b) for b in data], signature="y")
+
+
+def publish_cname(cname):
+    bus = dbus.SystemBus()
+    server = dbus.Interface(
+        bus.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
+        avahi.DBUS_INTERFACE_SERVER,
+    )
+    group = dbus.Interface(
+        bus.get_object(avahi.DBUS_NAME, server.EntryGroupNew()),
+        avahi.DBUS_INTERFACE_ENTRY_GROUP,
+    )
+    target_fqdn = server.GetHostNameFqdn()
+    rdata = to_dbus_bytes(encode_dns(target_fqdn))
+    group.AddRecord(
+        avahi.IF_UNSPEC,
+        avahi.PROTO_UNSPEC,
+        dbus.UInt32(0),
+        cname,
+        CLASS_IN,
+        TYPE_CNAME,
+        TTL,
+        rdata,
+    )
+    group.Commit()
+    print(f"Published {cname} -> {target_fqdn}", flush=True)
+    signal.pause()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("usage: avahi-alias <alias>", file=sys.stderr)
+        sys.exit(1)
+    publish_cname(sys.argv[1])
