@@ -1,0 +1,21 @@
+# --- Secrets / config (machine IPs, auth, Google creds, session key) ---
+config/
+
+# --- Python virtual environment ---
+venv/
+
+# --- Data (large SQLite DB + WAL/SHM) ---
+data/
+
+# --- Python bytecode caches ---
+__pycache__/
+*.py[cod]
+*.pyo
+
+# --- Claude Code local settings ---
+.claude/settings.local.json
+
+# --- Editor / OS cruft ---
+.env
+*.swp
+.DS_Store

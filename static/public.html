@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop Floor Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div id="app-nav-host"></div>
+
+<!-- Extra items placed inside the header on this page only -->
+<div id="dashboard-header-extras" class="hidden">
+  <div class="pulse-dot"></div>
+  <div id="reorder-bar">🎯 Drag cards to reorder — saved automatically</div>
+  <div id="refresh-status">Live · 00:00:00</div>
+  <div id="wall-clock">00:00:00</div>
+</div>
+
+<main>
+  <div id="machine-grid"></div>
+  <div id="no-machines">
+    No machines configured yet.<br>
+    <a href="/admin">Add machines in admin panel</a>
+  </div>
+</main>
+
+<div id="order-toast">Order saved</div>
+
+<script>
+  window.CNC_NAV = {
+    title:    'Shop Floor Monitor',
+    subtitle: 'Live Overview',
+    active:   'dashboard',
+  };
+</script>
+<script src="/static/nav.js"></script>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>

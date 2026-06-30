@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — CNC Shop Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div id="app-nav-host"></div>
+
+<div class="page-container">
+
+  <!-- Machines -->
+  <div>
+    <div class="section-header">
+      <div class="section-title">Configured Machines</div>
+      <button class="btn btn-primary" id="btn-add-machine">+ Add Machine</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Protocol</th>
+            <th>IP Address</th>
+            <th>Port</th>
+            <th>Pallets</th>
+            <th>Poll</th>
+            <th>Drift</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="machineTableBody">
+          <tr class="empty-row"><td colspan="8">No machines configured yet. Click + Add Machine to get started.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Change Password -->
+  <div>
+    <div class="section-header">
+      <div class="section-title">Change Password</div>
+    </div>
+    <div class="pw-card">
+      <div class="field">
+        <label>Current Password</label>
+        <input type="password" id="pwCurrent" />
+      </div>
+      <div class="field">
+        <label>New Password</label>
+        <input type="password" id="pwNew" />
+      </div>
+      <div class="field">
+        <label>Confirm New Password</label>
+        <input type="password" id="pwConfirm" />
+      </div>
+      <button class="btn btn-primary" id="btn-change-pw">Update Password</button>
+      <div class="msg" id="pwMsg"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add / Edit Machine Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add Machine</div>
+
+    <input type="hidden" id="editId" value="" />
+
+    <div class="field">
+      <label>Machine Name</label>
+      <input type="text" id="mName" placeholder="e.g. Brother 1" />
+    </div>
+
+    <div class="field">
+      <label>Protocol</label>
+      <select id="mProtocol">
+        <option value="">Loading protocols…</option>
+      </select>
+      <span class="field-hint" id="mProtocolHint"></span>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>IP Address</label>
+        <input type="text" id="mIp" placeholder="192.168.20.105" />
+      </div>
+      <div class="field">
+        <label>Port</label>
+        <input type="number" id="mPort" placeholder="auto" />
+      </div>
+    </div>
+
+    <div class="field-row" id="authFieldsRow">
+      <div class="field">
+        <label>Username (if required)</label>
+        <input type="text" id="mUsername" placeholder="Leave blank if none" />
+      </div>
+      <div class="field">
+        <label>Password (if required)</label>
+        <input type="password" id="mPassword" placeholder="Leave blank if none" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field" id="palletCountField">
+        <label>Pallet Count</label>
+        <select id="mPalletCount">
+          <option value="1">1 — Single program</option>
+          <option value="2">2 — Dual pallet</option>
+          <option value="0">0 — Not applicable / no scraping</option>
+        </select>
+        <span class="field-hint">Controls how many programs show on the dashboard card.</span>
+      </div>
+      <div class="field">
+        <label>Poll Interval (sec)</label>
+        <input type="number" id="mPoll" value="2" min="1" step="0.5" />
+      </div>
+    </div>
+
+    <div class="field" style="max-width:280px;">
+      <label>Machine Clock Drift (hours)</label>
+      <input type="number" id="mUtcOffset" value="0" min="-24" max="24" step="0.5" />
+      <span class="field-hint">If the machine's panel clock matches local time, leave at 0. Use Test Connection to suggest a value automatically.</span>
+    </div>
+
+    <!-- Dynamic protocol-specific fields rendered here -->
+    <div id="protocolConfigFields"></div>
+
+    <div class="msg" id="testResult"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-cancel">Cancel</button>
+      <button class="btn btn-warn" id="btn-test">▶ Test Connection</button>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" id="btn-save">Save Machine</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.CNC_NAV = {
+    title:    'Admin Panel',
+    subtitle: 'Machine Configuration',
+    active:   'admin',
+  };
+</script>
+<script src="/static/nav.js"></script>
+<script src="/static/admin.js"></script>
+</body>
+</html>
