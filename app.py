@@ -48,7 +48,7 @@ def _ensure_config():
     if not AUTH_FILE.exists():
         AUTH_FILE.write_text(json.dumps({
             "username": "admin",
-            "password_hash": _hash_pw(os.environ.get("CNC_DEFAULT_ADMIN_PASSWORD", "changeme"))
+            "password_hash": _hash_pw(os.environ.get("CNC_DEFAULT_ADMIN_PASSWORD", "admin"))
         }, indent=2))
     if not MACHINES_FILE.exists():
         MACHINES_FILE.write_text(json.dumps([], indent=2))
