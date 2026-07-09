@@ -58,6 +58,9 @@ def main() -> int:
                     help=f"keep polls/poll_errors newer than this many days (default {DEFAULT_RETENTION_DAYS})")
     ap.add_argument("--no-vacuum", action="store_true", help="skip VACUUM (no disk reclaim)")
     ap.add_argument("--no-backfill", action="store_true", help="skip machine_current backfill")
+    ap.add_argument("--compact", action="store_true",
+                    help="one-time: also de-duplicate the retained polls history "
+                         "(rewrites pre-change-only data). Not needed on daily runs.")
     ap.add_argument("--dry-run", action="store_true", help="report only; make no changes")
     args = ap.parse_args()
 
@@ -91,6 +94,12 @@ def main() -> int:
     result = db.prune_history(args.retention_days)
     print(f"[maintenance] deleted: {result['polls_deleted']:,} polls, "
           f"{result['poll_errors_deleted']:,} poll_errors")
+
+    if args.compact:
+        print("[maintenance] compacting retained polls history (one-time)...")
+        cr = db.compact_history()
+        print(f"[maintenance] compaction: scanned {cr['scanned']:,}, "
+              f"kept {cr['kept']:,}, deleted {cr['deleted']:,}")
 
     if args.no_vacuum:
         print("[maintenance] VACUUM skipped (--no-vacuum). "

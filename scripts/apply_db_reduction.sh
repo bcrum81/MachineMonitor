@@ -32,8 +32,8 @@ info "Database size before: $(du -h "$DB" 2>/dev/null | cut -f1)"
 info "Stopping cnc-probe (brief polling pause; the new storage code loads on restart)..."
 systemctl stop cnc-probe
 
-info "Running one-time maintenance (backfill + prune ${RETENTION_DAYS}d + VACUUM)..."
-"$INSTALL_DIR/venv/bin/python3" "$INSTALL_DIR/maintenance.py" --retention-days "$RETENTION_DAYS"
+info "Running one-time maintenance (backfill + prune ${RETENTION_DAYS}d + compact + VACUUM)..."
+"$INSTALL_DIR/venv/bin/python3" "$INSTALL_DIR/maintenance.py" --retention-days "$RETENTION_DAYS" --compact
 
 info "Installing daily maintenance timer..."
 install -m 644 "$INSTALL_DIR/systemd/cnc-probe-maintenance.service" \

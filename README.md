@@ -177,7 +177,7 @@ sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/maintenance.py --retention-d
 systemctl list-timers cnc-probe-maintenance.timer
 ```
 
-Retention is set by `DEFAULT_RETENTION_DAYS` in `maintenance.py`. `scripts/apply_db_reduction.sh` performs the initial one-time cutover (stop service → prune + VACUUM → enable timer → restart).
+Retention is set by `DEFAULT_RETENTION_DAYS` in `maintenance.py`. `scripts/apply_db_reduction.sh` performs the initial one-time cutover (stop service → prune → compact retained history → VACUUM → enable timer → restart). The `--compact` flag rewrites pre-existing dense history through the same change-only filter; it's for the one-time migration only and is not part of the daily job.
 
 ### Event table cleanup
 

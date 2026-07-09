@@ -824,6 +824,60 @@ def prune_history(retention_days: int) -> dict:
     return {"cutoff": cutoff, "polls_deleted": p, "poll_errors_deleted": e}
 
 
+def compact_history() -> dict:
+    """One-time migration: rewrite the `polls` history in place, keeping only
+    rows that represent a meaningful state change or a heartbeat — the same
+    policy write_poll applies going forward.
+
+    Used to compact history that was recorded *before* change-only storage.
+    Idempotent: re-running on already-compacted data deletes ~nothing. Returns
+    rows scanned/kept/deleted.
+    """
+    scanned = 0
+    kept = 0
+    with _get_conn() as conn:
+        conn.execute("DROP TABLE IF EXISTS _keep")
+        conn.execute("CREATE TEMP TABLE _keep (id INTEGER PRIMARY KEY)")
+        machine_ids = [r[0] for r in conn.execute("SELECT DISTINCT machine_id FROM polls")]
+        for mid in machine_ids:
+            prev_sig = None
+            last_dt = None
+            keep_ids = []
+            # Stream this machine's rows in chronological order.
+            for rid, ts, data in conn.execute(
+                "SELECT id, ts, data FROM polls WHERE machine_id = ? ORDER BY ts, id", (mid,)
+            ):
+                scanned += 1
+                try:
+                    d = json.loads(data)
+                except Exception:
+                    d = {}
+                sig = _poll_signature(d)
+                try:
+                    dt = datetime.fromisoformat(ts)
+                except (ValueError, TypeError):
+                    dt = None
+                keep = (
+                    prev_sig is None
+                    or sig != prev_sig
+                    or last_dt is None or dt is None
+                    or (dt - last_dt).total_seconds() >= POLL_HEARTBEAT_SECONDS
+                )
+                if keep:
+                    keep_ids.append((rid,))
+                    prev_sig = sig
+                    if dt is not None:
+                        last_dt = dt
+                    kept += 1
+            conn.executemany("INSERT INTO _keep (id) VALUES (?)", keep_ids)
+        deleted = conn.execute(
+            "DELETE FROM polls WHERE id NOT IN (SELECT id FROM _keep)"
+        ).rowcount
+        conn.execute("DROP TABLE _keep")
+        conn.commit()
+    return {"scanned": scanned, "kept": kept, "deleted": deleted}
+
+
 def vacuum() -> None:
     """Rebuild the database file to reclaim free pages (shrinks the file)."""
     conn = _get_conn()
