@@ -1,0 +1,12 @@
+[Unit]
+Description=CNC Probe — daily database maintenance
+Documentation=https://github.com/bcrum81/MachineMonitor
+
+[Timer]
+# Run daily at 03:30 local time; catch up if the machine was off.
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

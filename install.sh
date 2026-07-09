@@ -119,6 +119,12 @@ info "Installing systemd unit: avahi-alias@.service"
 install -m 644 "$INSTALL_DIR/systemd/avahi-alias@.service" \
     "/etc/systemd/system/avahi-alias@.service"
 
+info "Installing systemd units: cnc-probe-maintenance.service + .timer"
+install -m 644 "$INSTALL_DIR/systemd/cnc-probe-maintenance.service" \
+    "/etc/systemd/system/cnc-probe-maintenance.service"
+install -m 644 "$INSTALL_DIR/systemd/cnc-probe-maintenance.timer" \
+    "/etc/systemd/system/cnc-probe-maintenance.timer"
+
 info "Installing mDNS publisher: /usr/local/bin/avahi-alias"
 install -m 755 "$INSTALL_DIR/bin/avahi-alias" "/usr/local/bin/avahi-alias"
 
@@ -143,6 +149,9 @@ systemctl enable --now "$SERVICE_NAME"
 
 info "Enabling and starting mDNS alias ($MDNS_ALIAS)..."
 systemctl enable --now "avahi-alias@$MDNS_ALIAS"
+
+info "Enabling daily database maintenance timer..."
+systemctl enable --now cnc-probe-maintenance.timer
 
 # ============ summary ============
 sleep 2

@@ -62,6 +62,18 @@ if [ -f "$INSTALL_DIR/systemd/avahi-alias@.service" ]; then
     fi
 fi
 
+for unit in cnc-probe-maintenance.service cnc-probe-maintenance.timer; do
+    if [ -f "$INSTALL_DIR/systemd/$unit" ]; then
+        if ! cmp -s "$INSTALL_DIR/systemd/$unit" "/etc/systemd/system/$unit"; then
+            info "$unit changed — reinstalling"
+            install -m 644 "$INSTALL_DIR/systemd/$unit" "/etc/systemd/system/$unit"
+            UNITS_CHANGED=1
+        fi
+    fi
+done
+# Ensure the maintenance timer is enabled (no-op if already on).
+systemctl enable cnc-probe-maintenance.timer >/dev/null 2>&1 || true
+
 AVAHI_SCRIPT_CHANGED=0
 if [ -f "$INSTALL_DIR/bin/avahi-alias" ]; then
     if ! cmp -s "$INSTALL_DIR/bin/avahi-alias" "/usr/local/bin/avahi-alias"; then

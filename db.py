@@ -11,12 +11,58 @@ Schema:
 """
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 DB_DIR  = Path("/opt/cnc-probe/data")
 DB_PATH = DB_DIR / "cnc_data.db"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Poll-storage policy
+# ─────────────────────────────────────────────────────────────────────────────
+# Machines are polled every ~2s for live status + event detection, but ~99% of
+# consecutive polls are byte-identical to the one before. Storing every poll
+# grew the DB by ~2.4 GB/month. Instead we:
+#   * always upsert the latest snapshot into `machine_current` (1 row/machine),
+#   * append to the `polls` *history* only when meaningful state changes, plus a
+#     heartbeat row at most every POLL_HEARTBEAT_SECONDS so gaps stay bounded.
+# A daily maintenance job prunes `polls`/`poll_errors` older than the retention
+# window (see maintenance.py).
+POLL_HEARTBEAT_SECONDS = 300   # force-store an unchanged poll at least this often
+
+# Fields that change every poll (clocks, elapsed timers, transient scrape
+# errors) or that are tracked elsewhere (alarms live in the events table) are
+# excluded from the change signature so they don't defeat de-duplication.
+_VOLATILE_KEY_PARTS = ("clock", "date", "time", "_error", "alarm")
+_TIMESTAMPY_VALUE    = re.compile(r"\d{4}/\d{2}/\d{2}|\d+:\d{2}:\d{2}")
+
+# In-memory record of the last row actually written to `polls` per machine:
+# machine_id -> (signature, datetime_stored). Rebuilt lazily after a restart.
+_last_stored: dict[str, tuple[str, datetime]] = {}
+
+
+def _poll_signature(data: dict) -> str:
+    """A stable fingerprint of the *meaningful* state in a poll payload.
+
+    Ignores clock/elapsed/alarm fields and timestamp-valued cells so that only
+    genuine changes (status, program, counters, tool, …) produce a new value.
+    """
+    parts = []
+    for k in sorted(data):
+        kl = k.lower()
+        if any(p in kl for p in _VOLATILE_KEY_PARTS):
+            continue
+        cell = data[k]
+        v = cell.get("value") if isinstance(cell, dict) else cell
+        if v is None:
+            continue
+        vs = str(v)
+        if _TIMESTAMPY_VALUE.search(vs):
+            continue
+        parts.append(f"{k}={vs}")
+    return "|".join(parts)
 
 
 def _get_conn() -> sqlite3.Connection:
@@ -29,6 +75,9 @@ def init_db():
     """Create database directory and tables if they don't exist. Safe to call on every startup."""
     DB_DIR.mkdir(parents=True, exist_ok=True)
     with _get_conn() as conn:
+        # WAL keeps the frequent poll writes from blocking dashboard reads.
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS polls (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +88,16 @@ def init_db():
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_polls_machine_ts ON polls (machine_id, ts)")
+        # Latest snapshot per machine — 1 row/machine, upserted every poll.
+        # Powers the live dashboard so `polls` can stay change-only.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS machine_current (
+                machine_id   TEXT    PRIMARY KEY,
+                machine_name TEXT    NOT NULL,
+                ts           TEXT    NOT NULL,
+                data         TEXT    NOT NULL
+            )
+        """)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS poll_errors (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,13 +149,48 @@ def init_db():
 
 
 def write_poll(machine_id: str, machine_name: str, ts: str, data: dict):
-    """Write one poll result to the polls table."""
+    """Record one poll result.
+
+    Always refreshes the machine's latest snapshot (`machine_current`). Appends a
+    row to the `polls` history only when the meaningful state changed since the
+    last stored row, or when POLL_HEARTBEAT_SECONDS have elapsed — see the
+    module header for why. Event detection is unaffected; it runs in the poller
+    against every poll regardless of what gets stored here.
+    """
+    blob = json.dumps(data)
+
+    # Decide whether this poll is worth appending to history.
+    sig = _poll_signature(data)
+    try:
+        now = datetime.fromisoformat(ts)
+    except (ValueError, TypeError):
+        now = datetime.now(timezone.utc)
+
+    prev = _last_stored.get(machine_id)
+    store_history = (
+        prev is None
+        or sig != prev[0]
+        or (now - prev[1]).total_seconds() >= POLL_HEARTBEAT_SECONDS
+    )
+
     with _get_conn() as conn:
-        conn.execute(
-            "INSERT INTO polls (machine_id, machine_name, ts, data) VALUES (?, ?, ?, ?)",
-            (machine_id, machine_name, ts, json.dumps(data)),
-        )
+        conn.execute("""
+            INSERT INTO machine_current (machine_id, machine_name, ts, data)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(machine_id) DO UPDATE SET
+                machine_name = excluded.machine_name,
+                ts           = excluded.ts,
+                data         = excluded.data
+        """, (machine_id, machine_name, ts, blob))
+        if store_history:
+            conn.execute(
+                "INSERT INTO polls (machine_id, machine_name, ts, data) VALUES (?, ?, ?, ?)",
+                (machine_id, machine_name, ts, blob),
+            )
         conn.commit()
+
+    if store_history:
+        _last_stored[machine_id] = (sig, now)
 
 
 def write_error(machine_id: str, machine_name: str, ts: str, error: str):
@@ -199,12 +293,21 @@ def get_recent_deliveries(limit: int = 100, subscription_id: str | None = None) 
 
 
 def get_latest_poll(machine_id: str) -> dict | None:
-    """Return the most recent poll row for a machine, or None."""
+    """Return the most recent snapshot for a machine, or None.
+
+    Reads `machine_current` (updated every poll); falls back to the `polls`
+    history if that row does not exist yet (e.g. right after a fresh start).
+    """
     with _get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM polls WHERE machine_id = ? ORDER BY ts DESC LIMIT 1",
+            "SELECT * FROM machine_current WHERE machine_id = ?",
             (machine_id,),
         ).fetchone()
+        if row is None:
+            row = conn.execute(
+                "SELECT * FROM polls WHERE machine_id = ? ORDER BY ts DESC LIMIT 1",
+                (machine_id,),
+            ).fetchone()
     if row:
         return {
             "machine_id":   row["machine_id"],
@@ -677,3 +780,54 @@ def get_last_cycle_completed(machine_id: str) -> dict | None:
         "ts":      row["ts"],
         "program": payload.get("program", ""),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Maintenance — retention pruning, disk reclaim, snapshot backfill
+# ─────────────────────────────────────────────────────────────────────────────
+def backfill_current() -> int:
+    """Seed `machine_current` from the newest `polls` row per machine.
+
+    Idempotent. Used during the one-time migration and safe to re-run so the
+    live dashboard has data immediately after a restart. Returns rows written.
+    """
+    with _get_conn() as conn:
+        before = conn.total_changes
+        conn.execute("""
+            INSERT INTO machine_current (machine_id, machine_name, ts, data)
+            SELECT p.machine_id, p.machine_name, p.ts, p.data
+            FROM polls p
+            JOIN (
+                SELECT machine_id, MAX(ts) AS mts FROM polls GROUP BY machine_id
+            ) latest ON latest.machine_id = p.machine_id AND latest.mts = p.ts
+            ON CONFLICT(machine_id) DO UPDATE SET
+                machine_name = excluded.machine_name,
+                ts           = excluded.ts,
+                data         = excluded.data
+        """)
+        n = conn.total_changes - before
+        conn.commit()
+    return n
+
+
+def prune_history(retention_days: int) -> dict:
+    """Delete `polls` and `poll_errors` rows older than retention_days.
+
+    Does NOT touch events/webhook_deliveries/alarms_catalog — reporting data is
+    kept indefinitely. Returns the cutoff and rows deleted per table.
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+    with _get_conn() as conn:
+        p = conn.execute("DELETE FROM polls WHERE ts < ?", (cutoff,)).rowcount
+        e = conn.execute("DELETE FROM poll_errors WHERE ts < ?", (cutoff,)).rowcount
+        conn.commit()
+    return {"cutoff": cutoff, "polls_deleted": p, "poll_errors_deleted": e}
+
+
+def vacuum() -> None:
+    """Rebuild the database file to reclaim free pages (shrinks the file)."""
+    conn = _get_conn()
+    try:
+        conn.execute("VACUUM")
+    finally:
+        conn.close()

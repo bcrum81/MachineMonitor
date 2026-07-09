@@ -77,13 +77,16 @@ Everything tracked in git is static — the same on every install. Everything un
 | `db.py` | SQLite schema + query helpers |
 | `webhooks.py` | Webhook subscriptions + HMAC dispatch |
 | `sheets.py` | Google Sheets background writer |
+| `maintenance.py` | Retention prune + VACUUM CLI (run daily by the maintenance timer) |
 | `cleanup_events.py` | Maintenance CLI to audit/prune the `events` table |
 | `protocols/` | Protocol plugins (`http_brother`, `focas_fanuc`, `opcua_brother`) |
 | `static/` | HTML/CSS/JS for all pages |
 | `systemd/cnc-probe.service` | Systemd unit — copied to `/etc/systemd/system/` by install |
 | `systemd/avahi-alias@.service` | Systemd template unit for mDNS alias |
+| `systemd/cnc-probe-maintenance.service` + `.timer` | Daily DB maintenance job + schedule |
 | `bin/avahi-alias` | Python CNAME publisher — copied to `/usr/local/bin/` by install |
 | `install.sh` / `update.sh` / `uninstall.sh` | Lifecycle scripts |
+| `scripts/apply_db_reduction.sh` | One-time cutover to change-only storage + retention |
 | `requirements.txt` | Pinned Python dependencies |
 | `.gitignore` | Keeps runtime files out of the repo |
 | `README.md` | This file |
@@ -119,6 +122,7 @@ The installer seeds `config/auth.json` with:
 |---|---|
 | `cnc-probe.service` | Main FastAPI app, runs as root on port 8765 |
 | `avahi-alias@cnc-probe.local.service` | Publishes the mDNS CNAME so the host resolves as `cnc-probe.local` in addition to its real hostname |
+| `cnc-probe-maintenance.timer` | Runs the daily database prune + VACUUM (03:30 local) |
 
 Common commands:
 
@@ -141,19 +145,48 @@ sudo systemctl status avahi-alias@cnc-probe.local
 5. Fill in IP, poll interval, and any protocol-specific fields (for FOCAS, the tool / part count / program / pallet macro numbers)
 6. Save
 
-## Database Maintenance
+## Database & Storage Model
 
-Cycle/alarm events accumulate in the `events` table. `cleanup_events.py` audits and prunes them (dry-run by default):
+Machines are polled every ~2 seconds for live status and event detection, but the database does **not** store every poll — ~99% of consecutive polls are identical, which previously grew the DB by ~2.4 GB/month. Storage is decoupled from polling:
+
+| Table | What it holds | Growth |
+|---|---|---|
+| `machine_current` | Latest snapshot per machine (1 row/machine, upserted every poll) — powers the live dashboard | Fixed (one row per machine) |
+| `polls` | History, written **only when meaningful state changes** (status/program/counter/tool), plus a heartbeat row every ~5 min | ~1–2% of poll volume; pruned to a retention window |
+| `poll_errors` | Failed poll attempts | Pruned to the retention window |
+| `events` | `cycle.started` / `cycle.completed` / `alarm.<CODE>` — **the source for all cycle-time reporting** | Kept **indefinitely** |
+| `webhook_deliveries`, `alarms_catalog` | Delivery log + alarm dictionary | Kept indefinitely |
+
+The change-detection signature (in `db.py`) ignores clocks, elapsed timers, and alarm fields so only genuine state changes are recorded. The database uses WAL mode.
+
+### Automatic maintenance
+
+`cnc-probe-maintenance.timer` runs `maintenance.py` daily (03:30 local), which prunes `polls`/`poll_errors` beyond the **30-day** retention window and VACUUMs to reclaim disk. Reporting tables are never touched.
 
 ```bash
-# Preview what would change
-sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/cleanup_events.py
+# Preview what would be pruned (no changes)
+sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/maintenance.py --dry-run
 
-# Apply the changes
-sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/cleanup_events.py --apply
+# Run it by hand (default: prune 30 days, backfill snapshots, VACUUM)
+sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/maintenance.py
+
+# Change the retention window
+sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/maintenance.py --retention-days 60
+
+# Check the schedule
+systemctl list-timers cnc-probe-maintenance.timer
 ```
 
-> The high-volume `polls` and `poll_errors` tables are **not** pruned by this script and grow unbounded — keep an eye on the size of `data/cnc_data.db` on long-running installs.
+Retention is set by `DEFAULT_RETENTION_DAYS` in `maintenance.py`. `scripts/apply_db_reduction.sh` performs the initial one-time cutover (stop service → prune + VACUUM → enable timer → restart).
+
+### Event table cleanup
+
+`cleanup_events.py` separately audits/de-duplicates the `events` table (dry-run by default):
+
+```bash
+sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/cleanup_events.py          # preview
+sudo /opt/cnc-probe/venv/bin/python3 /opt/cnc-probe/cleanup_events.py --apply  # apply
+```
 
 ## Google Sheets Integration (Optional)
 

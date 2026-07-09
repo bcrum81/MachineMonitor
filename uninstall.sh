@@ -31,9 +31,14 @@ systemctl disable --now "$SERVICE_NAME" 2>/dev/null || true
 info "Stopping and disabling avahi-alias@$MDNS_ALIAS..."
 systemctl disable --now "avahi-alias@$MDNS_ALIAS" 2>/dev/null || true
 
+info "Stopping and disabling database maintenance timer..."
+systemctl disable --now cnc-probe-maintenance.timer 2>/dev/null || true
+
 info "Removing systemd unit files..."
 rm -f "/etc/systemd/system/$SERVICE_NAME.service"
 rm -f "/etc/systemd/system/avahi-alias@.service"
+rm -f "/etc/systemd/system/cnc-probe-maintenance.service"
+rm -f "/etc/systemd/system/cnc-probe-maintenance.timer"
 
 info "Removing mDNS publisher: /usr/local/bin/avahi-alias"
 rm -f "/usr/local/bin/avahi-alias"
